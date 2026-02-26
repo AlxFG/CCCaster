@@ -49,7 +49,9 @@ HRESULT __stdcall hook_endscene(IDirect3DDevice9 *device) {
 std::string InitDirectX(void *hwnd) {
     // Get VTable From Dummy Device
     HMODULE d3d9_module = GetModuleHandleA("d3d9.dll");
-    assert(d3d9_module != NULL);
+    if (d3d9_module == NULL) {
+        return "failed to get the d3d9.dll module handle";
+    }
 
     d3d9CreateFn create_fn = (d3d9CreateFn)GetProcAddress(d3d9_module, "Direct3DCreate9");
 
@@ -80,23 +82,23 @@ std::string InitDirectX(void *hwnd) {
 
 std::string HookDirectX() {
     if (MH_CreateHook(VTable[D3D9_RESET], (void*)&hook_reset, reinterpret_cast<LPVOID*>(&old_reset)) != MH_OK) {
-        assert(false);
+        return "failed to hook reset";
     }
     if (MH_CreateHook(VTable[D3D9_PRESENT], (void*)&hook_present, reinterpret_cast<LPVOID*>(&old_present)) != MH_OK) {
-        assert(false);
+        return "failed to hook present";
     }
     if (MH_CreateHook(VTable[D3D9_ENDSCENE], (void*)&hook_endscene, reinterpret_cast<LPVOID*>(&old_endscene)) != MH_OK) {
-        assert(false);
+        return "failed to hook endscene";
     }
 
     if (MH_EnableHook(VTable[D3D9_RESET]) != MH_OK) {
-        assert(false);
+        return "failed to enable reset hook";
     }
     if (MH_EnableHook(VTable[D3D9_PRESENT]) != MH_OK) {
-        assert(false);
+        return "failed to enable present hook";
     }
     if (MH_EnableHook(VTable[D3D9_ENDSCENE]) != MH_OK) {
-        assert(false);
+        return "failed to enable endscene hook";
     }
 
     return "";
