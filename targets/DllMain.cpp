@@ -1024,7 +1024,8 @@ struct DllMain
 #endif // RELEASE
 
             // Enable controllers now
-            if ( ! ProcessManager::isWine() )
+            // Alx Notes: I think this doesn't need to be behind an isWine flag
+            // if ( ! ProcessManager::isWine() )
                 ControllerManager::get().startHighFreqPolling();
 
             // Initialize the overlay now
