@@ -10,9 +10,13 @@ extern double desiredFps;
 
 extern double actualFps;
 
+extern bool isEnabled;
+
 void enable();
 
 void limitFPS();
+
+void mango_limit(bool is_early);
 
 }
 

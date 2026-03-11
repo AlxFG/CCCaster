@@ -8,6 +8,8 @@
 
 #include <d3dx9.h>
 #include <math.h>
+#include <assert.h>
+#include <SDL3/SDL.h>
 
 #include "DllAsmHacks.hpp"
 
@@ -28,7 +30,7 @@ void enable()
     if ( isEnabled )
         return;
 
-	// this runs regardless of the setting in caster. why. 
+	// this runs regardless of the setting in caster. why.
 
     // TODO find an alternative because this doesn't work on Wine
     WRITE_ASM_HACK ( AsmHacks::disableFpsLimit );
@@ -37,7 +39,7 @@ void enable()
 	// this will call limitfps after present (and the stuff which hooks onto present) exits
 	// it might be better? but it makes my frame counter look worse, for obvious reasons
 	for ( const AsmHacks::Asm& hack : AsmHacks::hookPresentCaller ) {
-		WRITE_ASM_HACK ( hack );
+		// WRITE_ASM_HACK ( hack );
 	}
 
     isEnabled = true;
@@ -49,11 +51,11 @@ void oldCasterFrameLimiter() {
 
     static uint64_t last1f = 0, last5f = 0, last30f = 0, last60f = 0;
     static uint8_t counter = 0;
-    
+
     ++counter;
 
     uint64_t now = TimerManager::get().getNow ( true );
-    
+
     /**
      * The best timer resolution is only in milliseconds, and we need to make
      * sure the spacing between frames is as close to even as possible.
@@ -61,13 +63,13 @@ void oldCasterFrameLimiter() {
      * What this code does is check every 30f, 5f, and 1f how many milliseconds have
      * passed since the last check and make sure we are close to or under the desired FPS.
      */
-    
+
 
     /*
     below, the 1000 / desiredFps, the 1000 casts said number to an int
     causing the value to be 16, instead of 16.666, which is what led to the game running at ~62.5 instead of 60
-    */ 
-   
+    */
+
      if ( counter % 30 == 0 )
     {
         while ( now - last30f < ( 30 * 1000 ) / desiredFps )
@@ -102,13 +104,13 @@ void oldCasterFrameLimiter() {
         last60f = now;
     }
 
-    
+
 }
 
 void newCasterFrameLimiter() {
 
     /*
-    
+
     overall, this frame limiter is much better, but still is causing some issues
     is it needed to swing back and do a frame fast if a lag frame occurs?
     i had assumed that it would be better this way, maybe not.
@@ -126,7 +128,7 @@ void newCasterFrameLimiter() {
 
     if im really going to throw shit at the wall, its possible that metlys frame limiter not being disabled also causes issues?
 
-	what if.. i just isolate the 
+	what if.. i just isolate the
 	i could maybe seperate the render state/gamestate
 
 	in process explorer, nothings melty had rtkvhd64.sys as the entry instead of mbaa entry
@@ -140,7 +142,7 @@ void newCasterFrameLimiter() {
     static int rollingFrameAverageIndex = 0;
 
 	static LARGE_INTEGER baseFreq;
-	static LARGE_INTEGER freq; 
+	static LARGE_INTEGER freq;
 	static LARGE_INTEGER prevFrameTime;
 	static LARGE_INTEGER millisecondDuration;
 
@@ -191,13 +193,13 @@ void newCasterFrameLimiter() {
 	LARGE_INTEGER currTime;
 
     bool wasLagFrame = true;
-	
-	
+
+
 	//log("%lld %lld %lld", currTime.QuadPart - prevFrameTime.QuadPart, millisecondDuration.QuadPart, freq.QuadPart);
 
-	// does this help ? 
+	// does this help ?
 	// no fucking clue. i think it does?
-	// check process explorer for a cycle count. try setting affinity to use only one core. 
+	// check process explorer for a cycle count. try setting affinity to use only one core.
 	// this change seems to provide a good reduction in cpu usage (check process explorer thread properties)
 	QueryPerformanceCounter(&currTime);
 	LARGE_INTEGER frameTimeLeft;
@@ -219,7 +221,7 @@ void newCasterFrameLimiter() {
         if(sleepTime > 2) {
             sleepTime--;
         }
-        
+
 		if(lagFrameTimer > 0) { // we are lagging. possibly sleep less? i need a perm solution for if the lagging is consistent
 			sleepTime = millis * 0.67;
 		}
@@ -232,7 +234,7 @@ void newCasterFrameLimiter() {
 		Sleep(sleepTime);
 		timeEndPeriod(1);
 	}
-	
+
     while(true) {
 		QueryPerformanceCounter(&currTime);
 		if(currTime.QuadPart - prevFrameTime.QuadPart > freq.QuadPart) {
@@ -243,7 +245,7 @@ void newCasterFrameLimiter() {
 		// ANY quantity of sleep in this loop massively frees up cpu, massively decreasing people complaining, but having it be done accurately is close to impossible.
 	}
 
-    if(wasLagFrame) { 
+    if(wasLagFrame) {
         if(totalFrames > (15 * 60)) {
             totalLagFrames++;
         }
@@ -279,10 +281,58 @@ void newCasterFrameLimiter() {
                 patchDWORD(CC_FPS_COUNTER_COLOR, tempCol);
                 lastColor = tempCol;
             }
-        }   
+        }
     }
-   
+
 	prevFrameTime.QuadPart = currTime.QuadPart;
+}
+
+// This frame limiter is ported from mangohud https://github.com/flightlessmango/MangoHud/blob/master/src/fps_limiter.h
+int64_t target = SDL_NS_PER_SECOND / desiredFps;
+int64_t overhead = 0;
+int64_t frame_start = 0;
+int64_t frame_end = 0;
+bool use_early = true;
+
+int64_t calc_sleep(int64_t start, int64_t end) {
+    if (target <= 0 || start <= 0)
+        return 0;
+
+    int64_t work = start - end;
+    if (work < 0)
+        work = 0;
+
+    int64_t sleep = (target - work) - overhead;
+    return sleep > 0 ? sleep : 0;
+}
+
+void do_sleep(int64_t sleep_time) {
+    assert(sleep_time >= 0);
+
+    int64_t t0 = SDL_GetTicksNS();
+
+    SDL_DelayNS(sleep_time);
+
+    int64_t over = (SDL_GetTicksNS() - t0) - sleep_time;
+    if (over < 0 || over > (target / 2))
+        over = 0;
+
+    overhead = over;
+}
+
+void mango_limit(bool is_early) {
+    if (!isEnabled || target <= 0)
+        return;
+
+    frame_start = SDL_GetTicksNS();
+
+    if (is_early != use_early) return;
+
+    int64_t sleep_time = calc_sleep(frame_start, frame_end);
+    if (sleep_time > 0)
+        do_sleep(sleep_time);
+
+    frame_end = SDL_GetTicksNS();
 }
 
 void limitFPS() {
@@ -291,8 +341,9 @@ void limitFPS() {
         return;
 
 	//oldCasterFrameLimiter();
-	
-	newCasterFrameLimiter();
+
+	// newCasterFrameLimiter();
+    mango_limit(false);
 
 }
 
@@ -301,9 +352,10 @@ void limitFPS() {
 void PresentFrameEnd ( IDirect3DDevice9 *device )
 {
 	// comment this out if you uncommented the hookPresentCaller hack
-	//DllFrameRate::limitFPS();
+	DllFrameRate::limitFPS();
 }
 
 void setDesiredFPS(double desiredFps_) {
     desiredFps = desiredFps_;
+    target = SDL_NS_PER_SECOND / desiredFps;
 }

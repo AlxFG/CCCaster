@@ -1,6 +1,7 @@
 #include "DllOverlayUi.hpp"
 #include "ProcessManager.hpp"
 #include "Constants.hpp"
+#include "DllFrameRate.hpp"
 
 #include "imgui.h"
 #include "imgui_impl_dx9.h"
@@ -65,6 +66,8 @@ void PresentFrameBegin ( IDirect3DDevice9 *device )
 {
     if ( ! initalizedDirectX )
         InitializeDirectX ( device );
+
+    if (DllFrameRate::isEnabled) DllFrameRate::mango_limit(true);
 
     D3DVIEWPORT9 viewport;
     device->GetViewport ( &viewport );

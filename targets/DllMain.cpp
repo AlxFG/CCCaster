@@ -990,7 +990,7 @@ struct DllMain
 
 #ifndef RELEASE
         if ( replayInputs && ( replaySpeed == 1 || KeyboardState::isDown ( VK_SPACE ) ) )
-            DllFrameRate::desiredFps = numeric_limits<double>::max();
+            setDesiredFPS(numeric_limits<double>::max());
         else if ( replayInputs && replaySpeed == 2 )
             *CC_SKIP_FRAMES_ADDR = 1;
 #endif
