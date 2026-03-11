@@ -52,6 +52,7 @@ LIB_OBJECTS = $(LIB_CPP_SRCS:.cpp=.o) $(CONTRIB_C_SRCS:.c=.o)
 MAIN_OBJECTS = $(MAIN_CPP_SRCS:.cpp=.o) $(CONTRIB_CC_SRCS:.cc=.o) $(CONTRIB_CPP_SRCS:.cpp=.o) $(CONTRIB_C_SRCS:.c=.o)
 DLL_OBJECTS = $(DLL_CPP_SRCS:.cpp=.o) $(HOOK_CC_SRCS:.cc=.o) $(HOOK_C_SRCS:.c=.o) $(CONTRIB_C_SRCS:.c=.o) $(CONTRIB_CPP_SRCS:.cpp=.o)
 
+
 # Tool chain
 PREFIX = i686-w64-mingw32-
 GCC = $(PREFIX)gcc
@@ -90,13 +91,14 @@ DEFINES += -DLOBBY_LIST='"$(LOBBY_LIST)"'
 INCLUDES = -I$(CURDIR) -I$(CURDIR)/netplay -I$(CURDIR)/lib -I$(CURDIR)/tests -I$(CURDIR)/3rdparty -I$(CURDIR)/sequences
 INCLUDES += -I$(CURDIR)/3rdparty/cereal/include -I$(CURDIR)/3rdparty/gtest/include -I$(CURDIR)/3rdparty/minhook/include
 INCLUDES += -I$(CURDIR)/3rdparty/d3dhook -I$(CURDIR)/3rdparty/framedisplay -I$(CURDIR)/3rdparty/imgui -I$(CURDIR)/3rdparty/imgui/backends
+INCLUDES += -I$(CURDIR)/3rdparty/SDL3/include
 CC_FLAGS = -m32 $(INCLUDES) $(DEFINES)
 #	https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html
 # 	Intel Celeron 440 is listed as minimum CPU for melty on steam
 CC_FLAGS += -mmmx -msse -msse2 -msse3 -mssse3
 
 # Linker flags
-LD_FLAGS = -m32 -static -lws2_32 -lpsapi -lwinpthread -lwinmm -lole32 -ldinput -lwininet -ldwmapi -lgdi32 -Wl,--export-all-symbols
+LD_FLAGS = -m32 -static -lws2_32 -lpsapi -lwinpthread -lwinmm -lole32 -ldinput -lwininet -ldwmapi -lgdi32 -luuid -limm32 -loleaut32 -lversion -lsetupapi -Wl,--export-all-symbols
 
 # Build options
 # DEFINES += -DDISABLE_LOGGING
@@ -168,7 +170,7 @@ $(BINARY): $(addprefix $(BUILD_PREFIX)/,$(MAIN_OBJECTS)) res/icon.res
 	$(CHMOD_X)
 	@echo
 
-$(FOLDER)/$(DLL): $(addprefix $(BUILD_PREFIX)/,$(DLL_OBJECTS)) res/rollback.o targets/CallDraw.s | $(FOLDER)
+$(FOLDER)/$(DLL): $(addprefix $(BUILD_PREFIX)/,$(DLL_OBJECTS)) res/rollback.o targets/CallDraw.s 3rdparty/SDL3/lib/libSDL3.a | $(FOLDER)
 	$(CXX) -o $@ $(CC_FLAGS) -Wall -std=c++2a -fconcepts $^ -shared $(LD_FLAGS) -ld3dx9
 	@echo
 	$(STRIP) $@
