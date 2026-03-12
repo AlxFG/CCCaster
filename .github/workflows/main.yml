@@ -22,9 +22,14 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
         with:
           submodules: 'true'
+      - uses: actions/upload-artifact@v6
+        with:
+          name: artifact
+          path: cccaster.*.zip
+          compression-level: 0
 
       # Runs a single command using the runners shell
       - name: Run a one-line script
