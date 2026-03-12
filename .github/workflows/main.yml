@@ -43,7 +43,6 @@ jobs:
         # Uploads zip artifact to github
       - uses: actions/upload-artifact@v6
         with:
-          name: artifact
           path: cccaster.*.zip
           compression-level: 0
 
