@@ -156,6 +156,7 @@ void newCasterFrameLimiter() {
 
     static uint32_t omfg;
 	static bool isFirstRun = true;
+    static HANDLE timer;
 	if(isFirstRun) {
 		isFirstRun = false;
 
@@ -176,6 +177,8 @@ void newCasterFrameLimiter() {
 
 		timeBeginPeriodRes = timeBeginPeriod(1);
 		timeEndPeriod(1);
+
+        timer = CreateWaitableTimerExW(NULL, NULL, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);	
 	}
 
     if(!paranoia) {
@@ -236,8 +239,6 @@ void newCasterFrameLimiter() {
 		timeEndPeriod(1);
         */
 
-        HANDLE timer = CreateWaitableTimerExW(NULL, NULL, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
-	
         LARGE_INTEGER time;
         time.QuadPart = -(int)(sleepTime * millisecondDuration.QuadPart); // why does this need to be negative 	
         SetWaitableTimer(timer, &time, 0, NULL, NULL, 0);
