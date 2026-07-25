@@ -6,6 +6,7 @@
 
 #include <timeapi.h>
 #include <synchapi.h>
+#include <windows.h>
 
 #include <d3dx9.h>
 #include <math.h>
@@ -256,6 +257,7 @@ void newCasterFrameLimiter() {
         wasLagFrame = false; // being here means we have some time to wait.
 
 		// ANY quantity of sleep in this loop massively frees up cpu, massively decreasing people complaining, but having it be done accurately is close to impossible.
+    	YieldProcessor();
 	}
 
     if(wasLagFrame) { 
